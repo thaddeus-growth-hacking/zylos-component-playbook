@@ -206,8 +206,10 @@ In `SKILL.md`, "Delivering a batch":
    EOF
    ```
 
-   Never pass the body as an argument; see the host's
-   `comm-bridge/SKILL.md`.
+   Only the message body goes between the `<<'EOF'` line and the closing
+   `EOF`, and the terminator must never end up in the message itself.
+   Agents do sometimes paste it into the body. Never pass the body as an
+   argument; see the host's `comm-bridge/SKILL.md`.
 2. Comment naming the artifact, the job id and the summary, on the Task
    that tracks it. Whether one exists, and where, is the owner's intake
    decision: ask once, and never create an Issue or Project implicitly.

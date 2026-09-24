@@ -185,8 +185,9 @@ start from nothing: its edge cases took real hosts to find.
    `zylos-ai/zylos-registry`'s `registry.json` lets owners run
    `zylos add <name>` and `zylos search`. A private repo shouldn't go in
    the public registry, since that would expose its name. Install it as
-   `zylos add <org>/<repo>`, or map the name on the host in
-   `~/zylos/.zylos/registry.json`.
+   `zylos add <org>/<repo>`. The host-local `~/zylos/.zylos/registry.json`
+   is used only when the remote registry can't be fetched, so it isn't a
+   reliable way to alias a name.
 
 ## 5. First install on a real host
 
