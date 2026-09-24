@@ -29,7 +29,10 @@ changes what you build.
 4. **Which credentials are required, which are optional?** Required ones are
    what a terminal install prompts for. Mark every secret `sensitive: true`.
 5. **How are results delivered, and who accepts them?** Name the channel
-   (openmax, lark, …) and the acceptance rule. On openmax: the file goes to
+   (openmax, lark, …) and the acceptance rule. Reports go to the **owner's
+   private channel** (their DM or 1:1 conversation), not a group. One agent
+   session serves every channel, and a group would see owner-only
+   data. On openmax: the file goes to
    the ArtifactStore, a comment names it, and the owner accepts. Which Issue
    or Task holds a result is the owner's decision. If it isn't made yet,
    write it down as an open item and make the agent ask. Don't guess it
@@ -86,7 +89,10 @@ start from nothing: its edge cases took real hosts to find.
 2. **`SKILL.md` body**: the operating loop for an agent (status → NEXT →
    repeat → report), the hard rules, and how results are delivered. If the
    repo had a Claude Code agent file with the loop, move the loop here and
-   make that file a pointer.
+   make that file a pointer. Keep it **runtime-neutral**: the host may run
+   Claude Code or Codex. Name shell commands and files, not one runtime's
+   tools (no "use the Task tool", no MCP tool names). The same goes for
+   scheduler prompts.
 3. **`hooks/lib.js`**: paths the way core derives them
    (`ZYLOS_DATA_DIR` → `$ZYLOS_DIR/components/<name>` →
    `$HOME/zylos/components/<name>`), the runtime bootstrap, the scheduler
@@ -116,7 +122,18 @@ start from nothing: its edge cases took real hosts to find.
    only tells the agent what to do with them.
 10. **`zylos/README.md`**: the ops guide. Cover where things live, who runs
     which hook, config, the command, the task, detached jobs, and what's
-    verified vs not.
+    verified vs not (including **which runtime**, Claude Code or Codex).
+    Start it with a short **"What this touches"** section for the host
+    agent's security review:
+    - every network endpoint and when it's called;
+    - the files read and written (data dir, skill dir, `~/.local/bin`,
+      anything else);
+    - the secrets used and where they're stored;
+    - the processes started and stopped;
+    - the scheduler tasks created.
+
+    Keep it accurate. It's what makes the review quick, and a wrong entry
+    fails it.
 
 ## 3. Tests and CI
 
@@ -164,6 +181,12 @@ start from nothing: its edge cases took real hosts to find.
    `zylos add` installs the latest tag.
 3. Check the tag: `git ls-tree vX.Y.Z --name-only | grep SKILL.md`, and that
    `SKILL.md`'s `version` equals `X.Y.Z`.
+4. **Registry (optional).** With a public repo, a PR to
+   `zylos-ai/zylos-registry`'s `registry.json` lets owners run
+   `zylos add <name>` and `zylos search`. A private repo shouldn't go in
+   the public registry, since that would expose its name. Install it as
+   `zylos add <org>/<repo>`, or map the name on the host in
+   `~/zylos/.zylos/registry.json`.
 
 ## 5. First install on a real host
 
@@ -175,20 +198,29 @@ zylos add <org>/<repo>              # latest vX.Y.Z tag; private repos need GitH
 
 For a chat install, the agent:
 
-1. collects the required keys, keeping secrets out of chat where possible
+1. **asks the owner to confirm** the install (every install, upgrade and
+   uninstall needs an explicit yes, which is an async round trip in chat),
+   and reviews the hooks' source first. Point it at `zylos/README.md`
+   "What this touches";
+2. collects the required keys, keeping secrets out of chat where possible
    (the owner can run configure at a terminal and paste JSON);
-2. pipes them as one JSON object to `node zylos/hooks/configure.js`;
-3. runs `node zylos/hooks/post-install.js` with a **10-minute** timeout;
-4. relays both outputs to the owner.
+3. pipes them as one JSON object to `node zylos/hooks/configure.js`;
+4. runs `node zylos/hooks/post-install.js` with a **10-minute** timeout;
+5. relays both outputs to the owner.
+
+For a **private repo**, the host's GitHub access must outlive the first
+install: every `zylos upgrade` fetches from GitHub again. Use a token that
+won't silently expire, or note when it must be renewed.
 
 Then watch, and write down what you saw in `zylos/README.md` "Verified":
 
 - post-install passes, and prints the absolute command;
-- the task is registered **with a reply channel**;
+- the task is registered **with a reply channel**, the owner's private one;
 - the first tick does what it should and calls `done`;
 - a report reaches the owner's channel;
 - one `zylos upgrade` (the 3-way merge, then post-upgrade's output in the
-  JSON result).
+  JSON result);
+- which runtime the host ran (Claude Code or Codex).
 
 ## 6. Keep it working
 
@@ -219,5 +251,8 @@ Then watch, and write down what you saw in `zylos/README.md` "Verified":
 - **Reporting every tick.** A tick that sees the same broken credential
   every 10 minutes must say so **once**. Remember sent alerts in the data
   dir.
+- **Passing a message to `c4-send` as an argument.** Quotes, `$` and the
+  `[MEDIA:file]` prefix get mangled. Pipe the body on stdin with a quoted
+  heredoc, as the host's `comm-bridge/SKILL.md` shows.
 - **Relaying logs into chat verbatim.** Error lines can carry a proxy URL
   with its password. Mask credential values in everything the tick prints.

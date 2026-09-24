@@ -9,7 +9,7 @@
 - [ ] How work starts: on request, on a schedule (tick), or as a service.
 - [ ] How throughput grows: which knobs, and their defaults.
 - [ ] Required vs optional keys; every secret is `sensitive: true`.
-- [ ] Delivery channel and acceptance rule. Anything undecided is listed as
+- [ ] Delivery channel (the owner's private channel, not a group) and acceptance rule. Anything undecided is listed as
       an open item, not coded.
 - [ ] Setup the component can't do (browser logins, accounts), marked as
       separate checks.
@@ -49,8 +49,17 @@
       condition, and masks secrets.
 - [ ] `SKILL.md` body: the loop, the hard rules, delivery. An old agent file
       now points to it.
+- [ ] `SKILL.md` body and task prompts are runtime-neutral: shell commands
+      and files, no Claude-only or Codex-only tool names.
+- [ ] Messages go through `c4-send` with the body on stdin (a quoted
+      heredoc), never as an argument.
+- [ ] Cron is off-minute (not `:00`/`:30`), and any fixed-time schedule
+      states its time zone.
 - [ ] `zylos/README.md`: tested core versions, where things live, hooks,
       config, command, task, detached jobs, verified vs not.
+- [ ] `zylos/README.md` starts with "What this touches": network endpoints,
+      files read and written, secrets and where they're stored, processes,
+      scheduler tasks. Checked against the code.
 
 **Tests and CI:**
 
@@ -68,12 +77,19 @@
       make.
 - [ ] `git tag vX.Y.Z origin/main && git push origin vX.Y.Z`.
 - [ ] `git ls-tree vX.Y.Z --name-only | grep SKILL.md` finds it.
+- [ ] Public repo: optionally a PR to `zylos-ai/zylos-registry`. Private
+      repo: not in the public registry; install by `<org>/<repo>`.
 
 ## After the first real install
 
+- [ ] The owner confirmed the install, and the host agent's security
+      review passed (or its findings are fixed).
+- [ ] Private repo: the host's GitHub token will still work at the next
+      upgrade (no silent expiry), or its renewal date is written down.
 - [ ] post-install output relayed; it printed the absolute command.
-- [ ] The task is registered with a reply channel.
+- [ ] The task is registered with the owner's private channel as its reply channel.
 - [ ] One tick ran, did the right thing, and called `done`.
 - [ ] A report reached the owner.
 - [ ] One `zylos upgrade` ran cleanly.
-- [ ] `zylos/README.md` "Verified" is updated with what was seen and when.
+- [ ] `zylos/README.md` "Verified" is updated with what was seen, when, and
+      on which runtime (Claude Code or Codex).

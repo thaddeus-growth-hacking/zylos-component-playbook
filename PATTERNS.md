@@ -139,7 +139,9 @@ In post-install and post-upgrade:
 4. Judge success by the output lines, not exit codes.
 5. With no reply channel, print the exact `cli.js update <id>
    --reply-channel … --reply-endpoint …` command on every run until one is
-   set.
+   set. The hint should name the **owner's private channel** (their DM or
+   1:1 conversation id), never a group: one session serves every channel,
+   and a group would see owner-only reports.
 
 pre-uninstall removes every task with the name.
 
@@ -184,12 +186,28 @@ Never run or wait for a job yourself. Then call done.
 Pick the miss threshold as about one period: a tick more than a period
 late is skipped, since the next one is due.
 
+Cron runs in the host's time zone (`TZ` in `~/zylos/.env`). For a
+component many hosts install, avoid `:00` and `:30`, where everyone's
+tasks pile up. Use an off-minute (`7,17,27,37,47,57 * * * *` rather than
+`*/10`; `23 * * * *` rather than `0 * * * *`). Put anything daily at a
+stated local time, and document which time zone it assumes.
+
 ### Delivery (openmax)
 
 In `SKILL.md`, "Delivering a batch":
 
-1. Upload the file to the ArtifactStore (`[MEDIA:file]<path>` via `c4-send`
-   into the owner's conversation).
+1. Upload the file to the ArtifactStore by sending `[MEDIA:file]<abs path>`
+   into the owner's conversation through `c4-send`, with the message body
+   **on stdin**:
+
+   ```sh
+   cat <<'EOF' | node ~/zylos/.claude/skills/comm-bridge/scripts/c4-send.js openmax '<conversation id>'
+   [MEDIA:file]/home/u/zylos/components/<name>/exports/result.csv
+   EOF
+   ```
+
+   Never pass the body as an argument; see the host's
+   `comm-bridge/SKILL.md`.
 2. Comment naming the artifact, the job id and the summary, on the Task
    that tracks it. Whether one exists, and where, is the owner's intake
    decision: ask once, and never create an Issue or Project implicitly.
