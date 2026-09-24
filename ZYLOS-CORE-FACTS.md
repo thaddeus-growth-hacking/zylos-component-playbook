@@ -2,7 +2,7 @@
 
 Checked in zylos-ai/zylos-core at **v0.7.1** (`ec0b851c22cbb2dd57e461c4cb7229908a12d887`)
 and **v0.8.1** (`a5ab5d12e56a3a8feb426b7449ac4b5c7e4fdd28`). These files are
-byte-identical between the two tags: `cli/commands/add.js`,
+byte-identical between the two tags (`cli/lib/github.js` is not: v0.8.1 changed its HTTP code, but both read the token the same way): `cli/commands/add.js`,
 `cli/lib/upgrade.js`, `cli/lib/configure-hook.js`, `cli/lib/config.js`,
 `cli/lib/bin.js`, `cli/lib/service.js`, `cli/lib/caddy.js`,
 `cli/commands/component.js`, `templates/pm2/ecosystem.config.cjs` and
@@ -10,6 +10,15 @@ byte-identical between the two tags: `cli/commands/add.js`,
 assume.
 
 Paths below use the defaults: `ZYLOS_DIR=~/zylos`.
+
+## The host agent
+
+| Fact | Where |
+|---|---|
+| The host agent **asks the owner before any install, upgrade or uninstall**, and waits for an explicit yes. In chat this is an async round trip, so plan for it. | `skills/component-management/SKILL.md` ("Always confirm before executing") |
+| Before running third-party code (your hooks), the host agent **reviews the source**: network calls, access to `.env` / credentials / SSH keys, behaviour beyond what it claims. It flags anything suspicious to the owner first. A short, accurate "What this touches" section in `zylos/README.md` keeps that review quick. | `templates/claude-system.md`, `templates/codex-system.md` ("Skill Security Review") |
+| The agent runtime can be **Claude Code or Codex**. Codex finds the same skills through a `~/zylos/.agents/skills → .claude/skills` symlink, so a `SKILL.md` body and task prompts must not rely on one runtime's tool names. | `cli/lib/runtime/codex.js` |
+| Messages go out through comm-bridge's `c4-send.js`, with the **body on stdin** (a quoted heredoc), never as a CLI argument. Quoting breaks otherwise, including for `[MEDIA:file]<path>`. | `skills/comm-bridge/SKILL.md` |
 
 ## Names and places
 
@@ -25,7 +34,8 @@ Paths below use the defaults: `ZYLOS_DIR=~/zylos`.
 
 | Fact | Where |
 |---|---|
-| Installs from the latest **semver tag** `vX.Y.Z`; `--branch <b>` installs a branch. A private repo needs `GITHUB_TOKEN`, `GH_TOKEN` or `gh auth login` on the host. | `cli/commands/add.js`, `cli/lib/github.js` |
+| Installs from the latest **semver tag** `vX.Y.Z`; `--branch <b>` installs a branch. A private repo needs `GITHUB_TOKEN`, `GH_TOKEN` or `gh auth login` on the host (checked in that order). | `cli/commands/add.js`, `cli/lib/github.js` |
+| `zylos add <org>/<repo>` works for any repo. A **bare name** (`zylos add foo`, `zylos search`) resolves through the registry. When the remote `zylos-ai/zylos-registry` `registry.json` can be fetched, **that list alone** is used. Only when the fetch fails does core fall back to its built-in list merged with the host's `~/zylos/.zylos/registry.json`. So on an online host a name added to the local file is ignored; it isn't a reliable way to alias a private repo. | `cli/lib/registry.js` (`loadRegistry`), `cli/lib/components.js`, `cli/lib/config.js` `REGISTRY_FILE` |
 | **At a terminal**, core prompts only for `config.required` keys (`sensitive: true` ones hidden), pipes them as one JSON object to the `configure` hook, then runs `post-install`. | `cli/commands/add.js` |
 | **In a chat install** (`zylos add … --json`), core runs **no hook**. It downloads, creates the data dir, links `bin`, and returns `config` and `next-steps` for the agent to act on. Your `next-steps` must say what the agent should do (typically: pipe keys to configure, run post-install with a 10-minute timeout, relay the output). | `cli/commands/add.js` |
 | Core **never applies a declared `default`**. The harness must apply its own defaults, or configure must write them. | (no code reads `default`) |
@@ -46,6 +56,7 @@ Paths below use the defaults: `ZYLOS_DIR=~/zylos`.
 |---|---|
 | post-install and post-upgrade get **no `ZYLOS_*` env**; derive paths from `ZYLOS_DIR` / `HOME` the way core does. pre-uninstall and configure do get them. | `cli/commands/add.js`, `cli/lib/upgrade.js`, `cli/commands/component.js` |
 | `zylos upgrade` backs the skill dir up, 3-way merges the new release in, then runs post-upgrade **synchronously while holding the component lock**. Its output lands in the upgrade's JSON result; a failure is non-fatal. Keep it light. | `cli/lib/upgrade.js` (step 7) |
+| Every `zylos upgrade` **re-fetches the tags and the release from GitHub**, so a private repo needs working GitHub access on the host for every upgrade, not just the first `add`. An expired token breaks upgrades later, when nobody is watching. | `cli/lib/upgrade.js` (`fetchLatestTag`) |
 | Upgrades compare semver tags with `SKILL.md`'s `version`. Every release bumps `version` and gets a matching tag **on the merged commit**. An `upgrade:` block in the frontmatter is not read. | `cli/lib/upgrade.js` |
 | `zylos uninstall` runs pre-uninstall **before** stopping the service and removing files, and deletes the data dir **only** with `purge`. | `cli/commands/component.js` |
 | The agent's foreground commands are capped at about 10 minutes, and a chat shell's default is shorter. A first install that downloads a runtime needs a 10-minute timeout; cap your own hooks below that. | host agent |
@@ -67,6 +78,7 @@ Paths below use the defaults: `ZYLOS_DIR=~/zylos`.
 | `--reply-channel` / `--reply-endpoint` are the task's reply path. Without them, whatever the task "reports" reaches no one. | `scripts/cli.js` |
 | Names are **not unique**. Reconcile by `list --json` and act by id. | `scripts/cli.js` |
 | Exit codes don't say whether a change worked (a `remove` of an unknown id exits 0). Read the output: `Task created: <id>`, `Task updated: <id>`, `Removed task: <id>`. | `scripts/cli.js` |
+| Cron is evaluated in the **host's time zone**: `TZ` in `~/zylos/.env`, else the process `TZ`, else UTC. A schedule like `0 9 * * *` means 09:00 on that host. | `scripts/tz.js`, `scripts/daemon.js` |
 | Other useful commands: `update <id> --prompt/--cron/--miss-threshold/--reply-*`, `pause`, `resume`, `list`. | `scripts/cli.js` |
 
 ## Delivering results (openmax)

@@ -26,7 +26,7 @@ Decisions already made:
 - Work starts: `<on request | every N minutes via a tick | as a pm2 service>`.
 - Throughput grows through: `<knobs and defaults>`, not the schedule.
 - Required config (sensitive): `<KEYS>`. Optional: `<KEYS>`.
-- Results go to `<channel>`; the owner accepts. Open: `<anything undecided>`.
+- Results go to `<channel>`, the owner's private channel; the owner accepts. Open: `<anything undecided>`.
 - Out of scope here (a separate check): `<e.g. browser login on the host>`.
   Keep that code path working.
 
@@ -48,7 +48,10 @@ Adapter (`zylos/`):
   preflight, one scheduler task); pre-uninstall (never deletes data).
 - `bin/<command>.js` and `detach.js`.
 - `<The tick prompt: what one tick does, and that it returns in seconds.>`
-- Move the operating loop from `<agent file>` into the `SKILL.md` body.
+- Move the operating loop from `<agent file>` into the `SKILL.md` body. Keep
+  it and the task prompt runtime-neutral (Claude Code or Codex).
+- `zylos/README.md` starts with "What this touches" (endpoints, files,
+  secrets, processes, tasks) for the host agent's security review.
 - Add the smoke CI and the boundary test.
 
 Run `<check command>` after every change. Open a PR when done. Don't tag
