@@ -31,6 +31,10 @@ are the working versions of everything described here.
    before you tag a release.
 5. [AGENT-BRIEF.md](AGENT-BRIEF.md): a prompt template for handing the job
    to a coding agent.
+6. [OPERATING.md](OPERATING.md): after the first install: how a coding
+   session instructs the host agent over openmax (the group, one identity
+   per session, mentions, headless sends, runbook-style instructions) and
+   ships a release when the host can't fetch a private repo.
 
 ## The shape in one picture
 
